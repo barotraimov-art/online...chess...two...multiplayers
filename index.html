@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Chess Online - 6 Digit ID</title>
+
+<link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+
+<style>
+body {
+    background: #1b1b1b;
+    color: white;
+    text-align: center;
+    font-family: Arial, sans-serif;
+}
+#board {
+    width: 350px;
+    margin: 20px auto;
+}
+#status {
+    font-size: 18px;
+    margin-top: 15px;
+    background: #2a2a2a;
+    padding: 10px;
+    display: inline-block;
+    border-radius: 5px;
+}
+.controls {
+    margin: 15px;
+    background: #2d2d2d;
+    padding: 15px;
+    border-radius: 8px;
+    display: inline-block;
+}
+input {
+    padding: 8px;
+    border-radius: 4px;
+    border: none;
+    width: 160px;
+    text-align: center;
+    font-size: 16px;
+}
+button {
+    padding: 8px 15px;
+    background: #2ed573;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+}
+#myIdDisplay {
+    font-size: 16px;
+    color: #a4b0be;
+    margin-bottom: 10px;
+}
+#my-id {
+    font-size: 22px;
+    letter-spacing: 2px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>♟ Chess Online (6-Xonali ID)</h2>
+
+<div class="controls">
+    <div id="myIdDisplay">Sizning ID kodingiz: <b style="color:#eccc68;" id="my-id">Generatsiya qilinmoqda...</b></div>
+    <input type="number" id="peerIdInput" placeholder="6 xonali ID kiriting" oninput="if(this.value.length > 6) this.value = this.value.slice(0,6);">
+    <button id="connectBtn" onclick="connectToPeer()">Ulanish</button>
+</div>
+
+<br>
+<div id="status">Tarmoqqa ulanish kutilmoqda...</div>
+<div id="board"></div>
+
+<script>
+var board = null;
+var game = new Chess();
+var myColor = 'w'; 
+var conn = null;
+
+// 🎲 100000 dan 999999 gacha bo'lgan tasodifiy 6 xonali son yaratish
+var random6DigitId = Math.floor(100000 + Math.random() * 900000).toString();
+
+// PeerJS obyektini o'zimiz yaratgan 6 xonali raqam bilan ishga tushiramiz
+var peer = new Peer(random6DigitId); 
+
+peer.on('open', function(id) {
+    document.getElementById('my-id').innerText = id;
+    document.getElementById('status').innerText = "O'yin tayyor. Raqibga 6 xonali ID kodni yuboring.";
+});
+
+// Raqib ulanib kelganida (Siz Oq bo'lasiz)
+peer.on('connection', function(connection) {
+    conn = connection;
+    myColor = 'w';
+    setupChatReceiver();
+    document.getElementById('status').innerText = "Raqib ulandi! Siz OQ donsiz. O'yinni boshlang.";
+    board.orientation('white');
+});
+
+// Raqibga ulanish (Siz Qora bo'lasiz)
+function connectToPeer() {
+    var peerId = document.getElementById('peerIdInput').value;
+    if (peerId.length !== 6) {
+        alert("Iltimos, to'g'ri 6 xonali ID kod kiriting!");
+        return;
+    }
+    document.getElementById('status').innerText = "Raqibga ulanmoqda...";
+    conn = peer.connect(peerId);
+    myColor = 'b';
+    
+    conn.on('open', function() {
+        document.getElementById('status').innerText = "Muvaffaqiyatli ulandi! Siz QORA donsiz. Raqib yurishini kuting.";
+        board.orientation('black');
+        setupChatReceiver();
+    });
+    
+    conn.on('error', function(err) {
+        document.getElementById('status').innerText = "Ulanishda xatolik! ID to'g'riligini tekshiring.";
+    });
+}
+
+// Raqib yurganda ma'lumotni qabul qilish
+function setupChatReceiver() {
+    conn.on('data', function(data) {
+        if (data.fen) {
+            game.load(data.fen);
+            board.position(data.fen);
+            updateStatus();
+        }
+    });
+}function customPieces(piece) {
+    var pieceUrls = {
+        'wK': 'https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg',
+        'wQ': 'https://upload.wikimedia.org/wikipedia/commons/1/15/Chess_qlt45.svg',
+        'wB': 'https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg',
+        'wN': 'https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg',
+        'wR': 'https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg',
+        'wP': 'https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg',
+        'bK': 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg',
+        'bQ': 'https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg',
+        'bB': 'https://upload.wikimedia.org/wikipedia/commons/9/98/Chess_bdt45.svg',
+        'bN': 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Chess_ndt45.svg',
+        'bR': 'https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg',
+        'bP': 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Chess_pdt45.svg'
+    };
+    return pieceUrls[piece];
+}
+
+function onDragStart(source, piece) {
+    if (game.game_over()) return false;
+    if (piece.charAt(0) !== myColor || game.turn() !== myColor) return false;
+}
+
+function onDrop(source, target) {
+    var move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q'
+    });
+
+    if (move === null) return 'snapback';
+
+    updateStatus();
+
+    // Yurishni raqibga yuborish
+    if (conn && conn.open) {
+        conn.send({ fen: game.fen() });
+    }
+}
+
+function onSnapEnd() {
+    board.position(game.fen());
+}
+
+function updateStatus() {
+    if (game.game_over()) {
+        if (game.in_checkmate()) document.getElementById('status').innerText = "Mot! O'yin tugadi.";
+        else document.getElementById('status').innerText = "Durang!";
+    } else {
+        var turn = game.turn() === myColor ? "Sizning yurishingiz" : "Raqib yurishi kutilmoqda...";
+        document.getElementById('status').innerText = turn;
+    }
+}
+
+board = Chessboard('board', {
+    draggable: true,
+    position: 'start',
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onSnapEnd: onSnapEnd,
+    pieceTheme: customPieces
+});
+
+</script>
+</body>
+</html>
